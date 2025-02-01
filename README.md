@@ -82,3 +82,11 @@ The solution should be based on the diagrams below:
 
 
 Thank you for participating!
+
+
+### Setup
+pip install -r requirements.txt
+
+docker-compose up -d
+docker exec -it code-challenge-airflow-1 /bin/bash
+airflow dags list-runs -d extract_dag
