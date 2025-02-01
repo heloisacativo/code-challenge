@@ -1,8 +1,8 @@
-version: '3'
+version: '3.8'
 
 services:
   db:
-    image: postgres:12
+    image: postgres:15
     environment:
       POSTGRES_DB: northwind
       POSTGRES_USER: northwind_user
@@ -11,4 +11,74 @@ services:
       - ./dbdata:/var/lib/postgresql/data
       - ./data/northwind.sql:/docker-entrypoint-initdb.d/northwind.sql
     ports:
-      - 5432:5432
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U northwind_user -d northwind"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  airflow:
+    image: apache/airflow:2.10.4-python3.9
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@db/airflow_db
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    entrypoint: []
+    command: >
+      bash -c "
+        until pg_isready -h db -p 5432 -U northwind_user; do
+          echo 'Waiting for database...'; sleep 5;
+          done &&
+          airflow db init
+          airflow db migrate &&
+          airflow db upgrade &&
+          airflow connections create-default-connections &&
+          airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@admin.com || true &&
+          airflow scheduler & 
+          exec airflow webserver
+        "
+  
+  
+
+  meltano:
+    image: meltano/meltano:latest
+    volumes:
+      - ./:/project
+    working_dir: /project
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U northwind_user -d northwind"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      DATABASE_URL: postgresql://northwind_user:thewindisblowing@db/northwind
+    entrypoint: /bin/bash
+    command: >
+      -c "
+        if [ ! -d .meltano ]; then
+          meltano init project --force && cd project
+        else
+          cd ./
+        fi &&
+        meltano install &&                # Instalando plugins explicitamente
+        meltano add extractor tap-postgres &&
+        meltano add loader target-postgres &&
+        meltano config tap-postgres set host db user northwind_user password thewindisblowing dbname northwind port 5432 &&
+        meltano config target-postgres set user northwind_user password thewindisblowing host db dbname northwind port 5432
+      "
+
+volumes:
+  postgres_data:
