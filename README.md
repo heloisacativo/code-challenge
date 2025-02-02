@@ -2,91 +2,123 @@
 
 Code challenge for Software Developer with focus in data projects.
 
-
-## Context
-
-At Indicium we have many projects where we develop the whole data pipeline for our client, from extracting data from many data sources to loading this data at its final destination, with this final destination varying from a data warehouse for a Business Intelligency tool to an api for integrating with third party systems.
-
-As a software developer with focus in data projects your mission is to plan, develop, deploy, and maintain a data pipeline.
-
-
 ## The Challenge
 
-We are going to provide 2 data sources, a PostgreSQL database and a CSV file.
+There are two data sources: a PostgreSQL database (an example provided by Microsoft for educational purposes called Northwind, with the difference that the order_detail table does not exist in this database I received; this table is represented by the provided CSV file) and a CSV file (this CSV file represents the order details of an e-commerce system).
 
-The CSV file represents details of orders from an ecommerce system.
+Challenge: Plan, develop, deploy, and maintain a data pipeline that extracts data daily from both sources, first saving the data to local disk and then loading it into a PostgreSQL database.
+- the CSV and the database are static
+- in the end, to be able to run a query that shows the orders and their details
 
-The database provided is a sample database provided by microsoft for education purposes called northwind, the only difference is that the **order_detail** table does not exists in this database you are beeing provided with. This order_details table is represented by the CSV file we provide.
+### Tools
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![POSTGRES](https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
 
-Schema of the original Northwind Database: 
-
-![image](https://user-images.githubusercontent.com/49417424/105997621-9666b980-608a-11eb-86fd-db6b44ece02a.png)
-
-Your challenge is to build a pipeline that extracts the data everyday from both sources and write the data first to local disk, and second to a PostgreSQL database. For this challenge, the CSV file and the database will be static, but in any real world project, both data sources would be changing constantly.
-
-Its important that all writing steps (writing data from inputs to local filesystem and writing data from local filesystem to PostgreSQL database) are isolated from each other, you shoud be able to run any step without executing the others.
-
-For the first step, where you write data to local disk, you should write one file for each table. This pipeline will run everyday, so there should be a separation in the file paths you will create for each source(CSV or Postgres), table and execution day combination, e.g.:
-
-```
-/data/postgres/{table}/2024-01-01/file.format
-/data/postgres/{table}/2024-01-02/file.format
-/data/csv/2024-01-02/file.format
-```
-
-You are free to chose the naming and the format of the file you are going to save.
-
-At step 2, you should load the data from the local filesystem, which you have created, to the final database.
-
-The final goal is to be able to run a query that shows the orders and its details. The Orders are placed in a table called **orders** at the postgres Northwind database. The details are placed at the csv file provided, and each line has an **order_id** field pointing the **orders** table.
-
-## Solution Diagram
-
-As Indicium uses some standard tools, the challenge was designed to be done using some of these tools.
-
-The following tools should be used to solve this challenge.
-
-Scheduler:
-- [Airflow](https://airflow.apache.org/docs/apache-airflow/stable/installation/index.html)
-
-Data Loader:
-- [Embulk](https://www.embulk.org) (Java Based)
-**OR**
-- [Meltano](https://docs.meltano.com/?_gl=1*1nu14zf*_gcl_au*MTg2OTE2NDQ4Mi4xNzA2MDM5OTAz) (Python Based)
-
-Database:
-- [PostgreSQL](https://www.postgresql.org/docs/15/index.html)
-
-The solution should be based on the diagrams below:
-![image](docs/diagrama_embulk_meltano.jpg)
-
-
-### Requirements
-
-- You **must** use the tools described above to complete the challenge.
-- All tasks should be idempotent, you should be able to run the pipeline everyday and, in this case where the data is static, the output shold be the same.
-- Step 2 depends on both tasks of step 1, so you should not be able to run step 2 for a day if the tasks from step 1 did not succeed.
-- You should extract all the tables from the source database, it does not matter that you will not use most of them for the final step.
-- You should be able to tell where the pipeline failed clearly, so you know from which step you should rerun the pipeline.
-- You have to provide clear instructions on how to run the whole pipeline. The easier the better.
-- You must provide evidence that the process has been completed successfully, i.e. you must provide a csv or json with the result of the query described above.
-- You should assume that it will run for different days, everyday.
-- Your pipeline should be prepared to run for past days, meaning you should be able to pass an argument to the pipeline with a day from the past, and it should reprocess the data for that day. Since the data for this challenge is static, the only difference for each day of execution will be the output paths.
-
-### Things that Matters
-
-- Clean and organized code.
-- Good decisions at which step (which database, which file format..) and good arguments to back those decisions up.
-- The aim of the challenge is not only to assess technical knowledge in the area, but also the ability to search for information and use it to solve problems with tools that are not necessarily known to the candidate.
-- Point and click tools are not allowed.
-
-
-Thank you for participating!
-
+- Scheduler: **Airflow**
+- Data Loader: **Metano**
 
 ### Setup
-pip install -r requirements.txt
+pip to install the dependencies
+> pip install -r requirements.txt
 
-docker-compose up -d
-docker exec -it code-challenge-airflow-1 /bin/bash
-airflow dags list-runs -d extract_dag
+> docker-compose up -d
+
+> docker cp <main.py path>:/opt/airflow/
+
+> docker ps
+
+> docker exec -it code-challenge-airflow-1 bash
+
+> python /opt/airflow/main.py -a
+
+separated
+
+> python /opt/airflow/main.py -e
+> python /opt/airflow/main.py -l
+
+> airflow dags list-runs -d extract_dag
+> airflow dags list-runs -d log_dag
+
+# Explaining/basing my decisions
+- Working with multiple services in a pipeline, like databases (PostgreSQL), queues (Celery), and APIs, Docker provided an efficient way to orchestrate and run all of them in separate instances;
+- Everything was encapsulated in containers, allowing for more consistent and efficient executions.
+- I chose to start by configuring the DAGs first because they are the structural foundation of any pipeline in Airflow. This approach allowed me to have a clear view of the overall flow before implementing any logic in the main code. By defining the tasks and their dependencies upfront, I ensured the pipeline was well-planned and organized from the start, preventing the need for rework later on.
+- Separating the DAGs and creating the main file right after was the best decision because it brought modularity and clarity to the project. 
+
+# What I've learned with this project?
+DAGs
+- I’ve gained a deeper understanding of DAGs (Directed Acyclic Graphs) and how the flow works within Airflow.
+- Learned the importance of the start_date to prevent errors when scheduling tasks
+- I saw the value of using default_args rather than manually configuring common parameters like retries, retry_delay, email_on_failure, and other task-specific options for each individual task. Defining these once in default_args helps keep the code clean and more maintainable.
+How I Overcame Challenges
+-  Initially, when trying to run the pipeline for past dates, I was caught off guard by an error message related to start_date. To resolve this, I learned that I needed to adjust my DAG to allow execution on past dates by specifying a start_date that would cover those dates. After tweaking the code and reloading the DAG, I was able to run the pipeline for the desired days.
+-  Working with taps (extractors like tap-postgres) and targets (loaders like target-snowflake or target-csv), I had to dive into GitHub repositories and community forums to gather the missing information
+- I learned the value of debugging issues manually. I analyzed logs generated by commands like meltano invoke and meltano run, and explored how Meltano manages pipeline files locally to identify any configuration or execution errors.
+
+
+
+File docker-compose
+
+- For a long time, I kept receiving an error message stating that the database password was incorrect. After several attempts, I discovered that the issue stemmed from the docker-compose configuration, particularly within the Airflow setup. Once I fixed that, the issue was resolved.
+
+
+# Indicium Tech Code Challenge
+
+Desafio de código para Desenvolvedor de Software com foco em projetos de dados.
+
+## O Desafio
+
+Existem duas fontes de dados: um banco de dados PostgreSQL (um exemplo fornecido pela Microsoft para fins educacionais chamado Northwind, com a diferença de que a tabela `order_detail` não existe nesse banco de dados que eu recebi; essa tabela está representada pelo arquivo CSV fornecido) e um arquivo CSV (este arquivo CSV representa os detalhes dos pedidos de um sistema de e-commerce).
+
+Desafio: Planejar, desenvolver, implantar e manter um pipeline de dados que extraia dados diariamente de ambas as fontes, primeiro salvando os dados no disco local e depois carregando-os em um banco de dados PostgreSQL.
+- O CSV e o banco de dados são estáticos
+- No final, deve ser possível executar uma consulta que mostre os pedidos e seus detalhes
+
+### Ferramentas
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![POSTGRES](https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
+
+- Scheduler: **Airflow**
+- Data Loader: **Metano**
+
+### Configuração
+Usar o pip para instalar as dependências
+> pip install -r requirements.txt
+
+> docker-compose up -d
+
+> docker cp <caminho do main.py>:/opt/airflow/
+
+> docker ps
+
+> docker exec -it code-challenge-airflow-1 bash
+
+> python /opt/airflow/main.py -a
+
+Separado
+
+> python /opt/airflow/main.py -e  
+> python /opt/airflow/main.py -l
+
+> airflow dags list-runs -d extract_dag  
+> airflow dags list-runs -d log_dag
+
+# Explicando e justificando minhas decisões
+- Trabalhar com múltiplos serviços em um pipeline, como bancos de dados (PostgreSQL), filas (Celery) e APIs, o Docker forneceu uma maneira eficiente de orquestrar e executar todos esses serviços em instâncias separadas;
+- Tudo foi encapsulado em contêineres, permitindo execuções mais consistentes e eficientes.
+- Optei por começar configurando os DAGs, pois eles são a base estrutural de qualquer pipeline no Airflow. Essa abordagem me permitiu ter uma visão clara do fluxo geral antes de implementar qualquer lógica no código principal. Definindo as tarefas e suas dependências de antemão, garanti que o pipeline fosse bem planejado e organizado desde o início, evitando retrabalho mais tarde.
+- Separar os DAGs e criar o arquivo principal logo em seguida foi a melhor decisão, pois trouxe modularidade e clareza ao projeto.
+
+# O que aprendi com esse projeto?
+DAGs
+- Aprofundei meu entendimento sobre DAGs (Grafos Acíclicos Dirigidos) e como o fluxo do Airflow funciona;
+- Aprendi a importância do `start_date` para evitar erros ao agendar tarefas;
+- Percebi o valor de usar `default_args` ao invés de configurar manualmente parâmetros comuns como `retries`, `retry_delay`, `email_on_failure` e outras opções específicas de tarefas para cada tarefa individual. Definir esses parâmetros uma vez em `default_args` ajuda a manter o código;
+
+Como superei os desafios
+- Inicialmente, ao tentar executar o pipeline para datas passadas, erros relacionada ao `start_date`. Para resolver isso, aprendi que precisava ajustar o DAG para permitir a execução em datas passadas, especificando um `start_date` que cobrisse essas datas. Depois de ajustar o código e recarregar o DAG, consegui rodar o pipeline para os dias certos.
+- Trabalhando com taps (como tap-postgres) precisei consultar em repositórios do GitHub e fóruns da comunidade onde consegui me encontrar;
+- Aprendi o valor de depurar problemas manualmente. Analisei os logs gerados por comandos como `meltano invoke` e `meltano run`, e explorei como o Meltano gerencia arquivos de pipeline localmente para identificar erros de configuração ou execução.
+
+Arquivo docker-compose
+- Por um longo tempo, continuei recebendo uma mensagem de erro informando que a senha do banco de dados estava incorreta. Depois de várias tentativas, descobri que o problema estava na configuração do `docker-compose`, dentro da configuração do Airflow. Assim que corrigi isso, o problema foi resolvido.
