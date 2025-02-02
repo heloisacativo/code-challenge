@@ -11,34 +11,18 @@ plugins:
     variant: meltanolabs
     pip_url: git+https://github.com/MeltanoLabs/tap-postgres.git
     config:
-      host:
-        db:
-          user:
-            northwind_user:
-              password:
-                thewindisblowing:
-                  database: northwind
-                  dbname:
-                    northwind:
-                      port: '5432'
+      host: db
+      port: 5432
+      user: northwind_user
+      dbname: northwind
+      database: northwind
   loaders:
   - name: target-postgres
     variant: meltanolabs
     pip_url: meltanolabs-target-postgres
     config:
-      host:
-        db:
-          user:
-            northwind_user:
-              password:
-                thewindisblowing:
-                  database: northwind
-      user:
-        northwind_user:
-          password:
-            thewindisblowing:
-              host:
-                db:
-                  dbname:
-                    northwind:
-                      port: '5432'
+      host: db
+      user: northwind_user
+      port: 5432
+      dbname: northwind
+      database: northwind
